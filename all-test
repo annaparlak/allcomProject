@@ -1,0 +1,122 @@
+package com.github.apxrb.allegro.test;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.Select;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+import java.beans.Expression;
+import java.util.concurrent.TimeUnit;
+import org.openqa.selenium.Alert;
+import java.util.Iterator;
+import java.lang.String;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.util.List;
+import org.openqa.selenium.logging.LogEntries;
+import org.openqa.selenium.logging.LogEntry;
+import org.openqa.selenium.logging.LogType;
+import org.openqa.selenium.logging.LoggingPreferences;
+import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.remote.DesiredCapabilities;
+import org.testng.Assert;
+
+public class AllegroTest {
+
+    public static String stripNonDigits(final CharSequence input)
+    {
+        final StringBuilder sb = new StringBuilder(input.length());
+        for(int i = 0; i < input.length(); i++)
+        {
+            final char c = input.charAt(i);
+            if(c > 47 && c < 58){
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    private WebDriver driver;
+
+    @BeforeClass(alwaysRun = true)
+    public void setUp() {
+        driver = new FirefoxDriver();
+        driver.manage()
+                .timeouts()
+                .implicitlyWait(5, TimeUnit.SECONDS);
+    }
+
+    @BeforeMethod(alwaysRun = true)
+
+    //1. Otwórz stronę allegro.pl
+    public void openHomePage() {
+        driver.get("http://www.allegro.pl");
+    }
+
+     @AfterClass(alwaysRun = true)
+    public void tearDown() {
+       driver.quit();
+    }
+
+    @Test
+    public void searchingSmartwatch() {
+
+    //2. W pole wyszukiwania wpisz 'smartwatch'
+        driver.findElement(By.id("main-search-text"))
+                .sendKeys("smartwatch");
+
+     //3. Kliknij ikonkę lupy, żeby uruchomić wyszukiwanie
+        driver.findElement(By.xpath("/html/body/div[3]/div[2]/div[2]/div/header/div/div/div[1]/form/input"))
+                .click();
+
+    //4. Posortuj wyniki wyszukiwania wg "cena: od najwyższej"
+       WebElement dropdown = driver.findElement(By.xpath("//*[@id='listing']//div[1]/div[3]/div[1]/span/span"));
+        dropdown.click();
+       WebDriverWait wait = new WebDriverWait(driver, 10);
+        WebElement option = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//*[@id='listing']//div[1]/div[3]/div[2]/dl/dd[2]/a/span")));
+       driver.findElement(By.xpath("//*[@id='listing']//div[1]/div[3]/div[2]/dl/dd[2]/a/span")).click();
+
+        WebElement visible = driver.findElement(By.xpath("//*[@id='listing']//div[1]/div[3]/div[1]/span/strong"));
+            //wait.until(ExpectedConditions.textToBePresentInElement(visible, "od najwyższej"));
+           //wait.until(ExpectedConditions.textToBePresentInElementValue(visible,"od najwyższej"));
+        driver.manage().timeouts().implicitlyWait(10,TimeUnit.SECONDS);
+
+        //5. Kliknij pierwszą aukcję z listy
+        driver.findElement(By.xpath("//*[@id='featured-offers']//*[@data-id][1]//div[@class='details']//a/span"))
+        .click();
+
+        //6. Na stronie przedmiotu zweryfikuj, że cena jest wyższa niż 1000 zł
+        WebElement priceElement = driver.findElement(By.xpath("//*[@id='priceValue']"));
+        String price = priceElement.getText();
+        price = stripNonDigits(price);
+        int priceInt = Integer.parseInt(price);
+        Assert.assertTrue(priceInt > 1000);
+
+        //7. Przejdź na zakładkę "Dostawa i płatność"
+        driver.findElement(By.xpath("//*[@id='watchedNav']//ul/li[2]/a"))
+            .click();
+
+        //8. Pobierz i wypisz w logu dostępne opcje dostawy
+        List<WebElement> rows = driver.findElements(By.xpath("//*[@id='delivery']//div[@class='deliveryAndPayment'][2]/table/tbody/tr"));
+        Iterator<WebElement> i = rows.iterator();
+        while(i.hasNext())
+        {
+            WebElement row = i.next();
+            List<WebElement> columns = row.findElements(By.tagName("td"));
+            Iterator<WebElement> j = columns.iterator();
+            while(j.hasNext())
+            {
+                WebElement column = j.next();
+                System.out.println(column.getText() + "\t");
+                LogEntries logs = driver.manage().logs().get(column.getText());
+
+            }
+
+        }
+    }
+}
